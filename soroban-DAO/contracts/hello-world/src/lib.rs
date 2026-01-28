@@ -55,7 +55,13 @@ pub enum DataKey {
 const DAY_IN_LEDGERS: u32 = 17_280;
 const WEEK_IN_LEDGERS: u32 = 120_960;
 const MONTH_IN_LEDGERS: u32 = 518_400;
+const SIX_MONTHS_IN_LEDGERS: u32 = 3_110_400;  // Better threshold! Users pay less per extension
 const YEAR_IN_LEDGERS: u32 = 6_307_200;
+
+// TTL STRATEGY:
+// - Threshold = 6 months: If TTL drops below 6 months, extend it
+// - Extend to = 1 year: Extend TTL to 1 year
+// - This means: User pays for ~6 months extension (smaller fee)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //                         VOTER RECORD
@@ -116,7 +122,7 @@ impl VoteContract {
         
         // Extend TTL
         env.storage().instance().extend_ttl(
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
@@ -184,14 +190,14 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         env.storage().persistent().extend_ttl(
             &DataKey::DaoRecord(dao_name.clone()), 
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
         // Extend TTL for the index too
         env.storage().persistent().extend_ttl(
             &DataKey::DaoNames, 
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
@@ -199,7 +205,7 @@ impl VoteContract {
         //                     EXTEND INSTANCE TTL FOR CONTRACT
         // ═══════════════════════════════════════════════════════════════════
         env.storage().instance().extend_ttl(
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
@@ -336,12 +342,12 @@ impl VoteContract {
         // Extend TTL for the vote record
         env.storage().persistent().extend_ttl(
             &vote_key,
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
         env.storage().instance().extend_ttl(
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
@@ -419,7 +425,7 @@ impl VoteContract {
         // Extend TTL
         env.storage().persistent().extend_ttl(
             &DataKey::DaoRecord(dao_name.clone()), 
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
@@ -580,7 +586,7 @@ impl VoteContract {
         
         // Extend TTL
         env.storage().instance().extend_ttl(
-            MONTH_IN_LEDGERS,
+            SIX_MONTHS_IN_LEDGERS,
             YEAR_IN_LEDGERS
         );
         
