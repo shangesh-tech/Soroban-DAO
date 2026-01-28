@@ -222,6 +222,41 @@ impl VoteContract {
             (symbol_short!("dao"), symbol_short!("created")),
             (dao_name, dao_owner, dao_deadline)
         );
+
+        // env.events().publish(
+        //     TOPICS,      // First tuple - for FILTERING/SEARCHING
+        //     DATA         // Second tuple - the actual EVENT DATA
+        // );
+
+        // Real Example
+
+        // // Your event:
+        // env.events().publish(
+        //     (symbol_short!("dao"), symbol_short!("created")),  // TOPICS
+        //     (dao_name, dao_owner, dao_deadline)                 // DATA
+        // );
+
+        // Stored in Stellar as:
+
+        // json
+        // {
+        //     "topics": ["dao", "created"],
+        //     "data": {
+        //         "dao_name": "TechDAO",
+        //         "dao_owner": "GA...XYZ",
+        //         "dao_deadline": 1700000000
+        //     }
+        // }
+
+        // Frontend JavaScript to filter:
+
+        // Get ALL dao events
+        // events.filter(e => e.topics[0] === "dao")
+        // Get only "created" dao events
+        // events.filter(e => e.topics[0] === "dao" && e.topics[1] === "created")
+        // Get only "deleted" dao events  
+        // events.filter(e => e.topics[0] === "dao" && e.topics[1] === "deleted")
+
     }
 
     // ─────────────────────────────────────────────────────────────────────────
