@@ -719,3 +719,5 @@ impl VoteContract {
             .has(&vote_key)
     }
 }
+
+mod test;
