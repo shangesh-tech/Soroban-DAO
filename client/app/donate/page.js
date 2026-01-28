@@ -50,9 +50,7 @@ export default function DonatePage() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Heart className="w-8 h-8 text-white" />
-        </div>
+        
         <h1 className="text-3xl font-bold text-black">Support SorobanDAO</h1>
         <p className="mt-2 text-neutral-600">
           Your donations help maintain and improve the platform

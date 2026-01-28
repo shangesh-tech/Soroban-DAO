@@ -59,9 +59,7 @@ export default function AdminPage() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Shield className="w-8 h-8 text-white" />
-        </div>
+        
         <h1 className="text-3xl font-bold text-black">Admin Panel</h1>
         <p className="mt-2 text-neutral-600">
           Manage contract funds and platform settings

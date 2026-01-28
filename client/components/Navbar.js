@@ -8,7 +8,6 @@ import {
   X, 
   Home, 
   Vote, 
-  PlusCircle, 
   Gift, 
   Shield,
   Wallet
@@ -21,11 +20,10 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const navLinks = [
-    { href: "/", label: "Home", icon: Home },
-    { href: "/daos", label: "DAOs", icon: Vote },
-    { href: "/daos/create", label: "Create", icon: PlusCircle },
-    { href: "/donate", label: "Donate", icon: Gift },
-    { href: "/admin", label: "Admin", icon: Shield },
+    { href: "/", label: "Home"},
+    { href: "/daos", label: "DAOs" },
+    { href: "/donate", label: "Donate" },
+    { href: "/admin", label: "Admin"},
   ];
 
   const isActive = (href) => {
@@ -65,7 +63,6 @@ export default function Navbar() {
                       : "text-neutral-600 hover:bg-neutral-100"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
                   <span>{link.label}</span>
                 </Link>
               );

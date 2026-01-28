@@ -13,7 +13,6 @@ import {
   Globe
 } from "lucide-react";
 import StatsCard from "@/components/StatsCard";
-import DAOCard from "@/components/DAOCard";
 import { getAllDAOs, getStats } from "@/lib/mockData";
 
 export default function Home() {
@@ -131,25 +130,6 @@ export default function Home() {
               );
             })}
           </div>
-        </div>
-      </section>
-
-      {/* Recent DAOs Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-black">Recent DAOs</h2>
-          <Link
-            href="/daos"
-            className="text-sm font-medium text-neutral-600 hover:text-black flex items-center"
-          >
-            View all
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recentDAOs.map((dao) => (
-            <DAOCard key={dao.dao_name} dao={dao} />
-          ))}
         </div>
       </section>
 
