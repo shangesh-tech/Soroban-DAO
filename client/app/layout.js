@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import { WalletProvider } from "@/context/WalletContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,32 +25,34 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#000',
-              color: '#fff',
-              borderRadius: '8px',
-            },
-            success: {
-              iconTheme: {
-                primary: '#fff',
-                secondary: '#000',
+        <WalletProvider>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#000',
+                color: '#fff',
+                borderRadius: '8px',
               },
-            },
-            error: {
-              iconTheme: {
-                primary: '#fff',
-                secondary: '#000',
+              success: {
+                iconTheme: {
+                  primary: '#fff',
+                  secondary: '#000',
+                },
               },
-            },
-          }}
-        />
-        <Navbar />
-        <main className="flex-1">
-          {children}
-        </main>
+              error: {
+                iconTheme: {
+                  primary: '#fff',
+                  secondary: '#000',
+                },
+              },
+            }}
+          />
+          <Navbar />
+          <main className="flex-1">
+            {children}
+          </main>
+        </WalletProvider>
       </body>
     </html>
   );

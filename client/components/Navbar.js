@@ -6,18 +6,17 @@ import { useState } from "react";
 import { 
   Menu, 
   X, 
-  Home, 
   Vote, 
-  Gift, 
-  Shield,
-  Wallet
+  Wallet,
+  LogOut,
+  Loader2
 } from "lucide-react";
-import { MOCK_WALLET } from "@/lib/mockData";
+import { useWallet } from "@/context/WalletContext";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const pathname = usePathname();
+  const { isConnected, publicKey, isLoading, connect, disconnect, formatAddress } = useWallet();
 
   const navLinks = [
     { href: "/", label: "Home"},
@@ -31,8 +30,12 @@ export default function Navbar() {
     return pathname.startsWith(href);
   };
 
-  const handleConnect = () => {
-    setIsConnected(!isConnected);
+  const handleWalletClick = async () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      await connect();
+    }
   };
 
   return (
@@ -51,39 +54,45 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.href)
-                      ? "bg-black text-white"
-                      : "text-neutral-600 hover:bg-neutral-100"
-                  }`}
-                >
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? "bg-black text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                <span>{link.label}</span>
+              </Link>
+            ))}
           </div>
 
           {/* Wallet Button */}
           <div className="hidden md:flex items-center">
             <button
-              onClick={handleConnect}
+              onClick={handleWalletClick}
+              disabled={isLoading}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isConnected
-                  ? "bg-neutral-100 text-black border border-neutral-300"
+                  ? "bg-neutral-100 text-black border border-neutral-300 hover:bg-neutral-200"
                   : "bg-black text-white hover:bg-neutral-800"
-              }`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <Wallet className="w-4 h-4" />
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isConnected ? (
+                <LogOut className="w-4 h-4" />
+              ) : (
+                <Wallet className="w-4 h-4" />
+              )}
               <span>
-                {isConnected 
-                  ? `${MOCK_WALLET.slice(0, 6)}...${MOCK_WALLET.slice(-4)}` 
-                  : "Connect Wallet"
+                {isLoading 
+                  ? "Loading..." 
+                  : isConnected 
+                    ? formatAddress(publicKey) 
+                    : "Connect Wallet"
                 }
               </span>
             </button>
@@ -105,37 +114,42 @@ export default function Navbar() {
       {isOpen && (
         <div className="md:hidden border-t border-neutral-200">
           <div className="px-4 py-3 space-y-1">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
-                    isActive(link.href)
-                      ? "bg-black text-white"
-                      : "text-neutral-600 hover:bg-neutral-100"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{link.label}</span>
-                </Link>
-              );
-            })}
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsOpen(false)}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                  isActive(link.href)
+                    ? "bg-black text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+              >
+                <span>{link.label}</span>
+              </Link>
+            ))}
             <button
-              onClick={handleConnect}
+              onClick={handleWalletClick}
+              disabled={isLoading}
               className={`w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium mt-3 ${
                 isConnected
                   ? "bg-neutral-100 text-black border border-neutral-300"
                   : "bg-black text-white"
-              }`}
+              } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <Wallet className="w-4 h-4" />
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isConnected ? (
+                <LogOut className="w-4 h-4" />
+              ) : (
+                <Wallet className="w-4 h-4" />
+              )}
               <span>
-                {isConnected 
-                  ? `${MOCK_WALLET.slice(0, 6)}...${MOCK_WALLET.slice(-4)}` 
-                  : "Connect Wallet"
+                {isLoading 
+                  ? "Loading..." 
+                  : isConnected 
+                    ? formatAddress(publicKey) 
+                    : "Connect Wallet"
                 }
               </span>
             </button>

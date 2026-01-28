@@ -8,14 +8,18 @@ import {
   Calendar, 
   FileText, 
   Tag,
-  AlertCircle 
+  AlertCircle,
+  Loader2,
+  Wallet
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
-import { createDAO, MOCK_WALLET } from "@/lib/mockData";
+import { buildCreateDAOTransaction } from "@/lib/contract";
+import { useWallet } from "@/context/WalletContext";
 
 export default function CreateDAOPage() {
   const router = useRouter();
+  const { isConnected, publicKey, signAndSubmit, connect } = useWallet();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -55,6 +59,11 @@ export default function CreateDAOPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     if (!validateForm()) {
       toast.error("Please fix the errors in the form");
       return;
@@ -63,20 +72,25 @@ export default function CreateDAOPage() {
     setLoading(true);
 
     try {
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const deadlineTimestamp = new Date(formData.deadline).getTime();
       
-      createDAO(
+      // Build the transaction
+      const tx = await buildCreateDAOTransaction(
+        publicKey,
         formData.name.trim(),
         formData.description.trim(),
-        MOCK_WALLET,
         deadlineTimestamp
       );
 
-      toast.success("DAO created successfully!");
-      router.push("/daos");
+      // Sign and submit
+      const result = await signAndSubmit(tx);
+
+      if (result.success) {
+        toast.success("DAO created successfully!");
+        router.push("/daos");
+      } else {
+        throw new Error("Transaction failed");
+      }
     } catch (error) {
       toast.error(error.message || "Failed to create DAO");
     } finally {
@@ -212,7 +226,9 @@ export default function CreateDAOPage() {
         <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
           <p className="text-sm text-neutral-600">
             <span className="font-medium text-black">Owner Address:</span>{" "}
-            <span className="font-mono text-xs">{MOCK_WALLET}</span>
+            <span className="font-mono text-xs">
+              {isConnected ? publicKey : "Not connected"}
+            </span>
           </p>
           <p className="text-xs text-neutral-500 mt-1">
             You will be the owner of this DAO and can update or delete it.
@@ -227,20 +243,31 @@ export default function CreateDAOPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Create DAO
-              </>
-            )}
-          </button>
+          {isConnected ? (
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Create DAO
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={connect}
+              className="flex-1 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors flex items-center justify-center"
+            >
+              <Wallet className="w-4 h-4 mr-2" />
+              Connect Wallet
+            </button>
+          )}
         </div>
       </form>
     </div>

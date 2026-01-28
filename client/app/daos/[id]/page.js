@@ -16,23 +16,28 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Loader2,
+  Wallet,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   getDAO,
-  voteDAO,
-  deleteDAO,
   hasVoted,
-  MOCK_WALLET,
+  buildVoteTransaction,
+  buildDeleteDAOTransaction,
   formatDeadline,
   isExpired,
   getTimeRemaining,
-} from "@/lib/mockData";
+} from "@/lib/contract";
+import { useWallet } from "@/context/WalletContext";
+import { isSameAddress } from "@/lib/wallet";
 
 export default function DAODetailPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const daoName = decodeURIComponent(resolvedParams.id);
+  
+  const { isConnected, publicKey, signAndSubmit, connect } = useWallet();
   
   const [dao, setDao] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,43 +45,95 @@ export default function DAODetailPage({ params }) {
   const [deleting, setDeleting] = useState(false);
   const [userHasVoted, setUserHasVoted] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [checkingVoteStatus, setCheckingVoteStatus] = useState(false);
 
+  // Fetch DAO data
   useEffect(() => {
-    const fetchDAO = () => {
-      const daoData = getDAO(daoName);
-      if (daoData) {
+    const fetchDAO = async () => {
+      try {
+        const daoData = await getDAO(daoName);
         setDao(daoData);
-        setUserHasVoted(hasVoted(daoName, MOCK_WALLET));
+      } catch (error) {
+        console.error("Error fetching DAO:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchDAO();
   }, [daoName]);
 
+  // Check if user has voted when wallet connects
+  useEffect(() => {
+    const checkVoteStatus = async () => {
+      if (isConnected && publicKey && dao) {
+        setCheckingVoteStatus(true);
+        try {
+          const voted = await hasVoted(daoName, publicKey);
+          setUserHasVoted(voted);
+        } catch (error) {
+          console.error("Error checking vote status:", error);
+        } finally {
+          setCheckingVoteStatus(false);
+        }
+      }
+    };
+    checkVoteStatus();
+  }, [isConnected, publicKey, dao, daoName]);
+
   const handleVote = async (choice) => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     setVoting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const updatedDAO = voteDAO(MOCK_WALLET, daoName, choice);
-      setDao(updatedDAO);
-      setUserHasVoted(true);
-      toast.success(`You voted ${choice.toUpperCase()}!`);
+      // Build the vote transaction
+      const tx = await buildVoteTransaction(publicKey, daoName, choice);
+      
+      // Sign and submit
+      const result = await signAndSubmit(tx);
+      
+      if (result.success) {
+        // Refresh DAO data
+        const updatedDao = await getDAO(daoName);
+        setDao(updatedDao);
+        setUserHasVoted(true);
+        toast.success(`You voted ${choice.toUpperCase()}!`);
+      } else {
+        throw new Error("Transaction failed");
+      }
     } catch (error) {
-      toast.error(error.message);
+      console.error("Vote error:", error);
+      toast.error(error.message || "Failed to submit vote");
     } finally {
       setVoting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     setDeleting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      deleteDAO(daoName, MOCK_WALLET);
-      toast.success("DAO deleted successfully!");
-      router.push("/daos");
+      // Build the delete transaction
+      const tx = await buildDeleteDAOTransaction(publicKey, daoName);
+      
+      // Sign and submit
+      const result = await signAndSubmit(tx);
+      
+      if (result.success) {
+        toast.success("DAO deleted successfully!");
+        router.push("/daos");
+      } else {
+        throw new Error("Transaction failed");
+      }
     } catch (error) {
-      toast.error(error.message);
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete DAO");
       setShowDeleteConfirm(false);
     } finally {
       setDeleting(false);
@@ -86,10 +143,9 @@ export default function DAODetailPage({ params }) {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-neutral-200 rounded w-1/3" />
-          <div className="h-4 bg-neutral-200 rounded w-2/3" />
-          <div className="h-64 bg-neutral-200 rounded" />
+        <div className="text-center py-16">
+          <Loader2 className="w-8 h-8 text-neutral-400 mx-auto mb-4 animate-spin" />
+          <p className="text-neutral-600">Loading DAO from blockchain...</p>
         </div>
       </div>
     );
@@ -117,7 +173,7 @@ export default function DAODetailPage({ params }) {
   }
 
   const expired = isExpired(dao.dao_deadline);
-  const isOwner = dao.dao_owner === MOCK_WALLET;
+  const isOwner = isConnected && publicKey && isSameAddress(dao.dao_owner, publicKey);
   const yesPercentage = dao.total_votes > 0 
     ? Math.round((dao.yes / dao.total_votes) * 100) 
     : 0;
@@ -251,8 +307,19 @@ export default function DAODetailPage({ params }) {
           </div>
         </div>
 
-        {/* Vote Buttons */}
-        {!expired && !isOwner && !userHasVoted && (
+        {/* Vote Buttons - Show when wallet not connected */}
+        {!isConnected && !expired && (
+          <button
+            onClick={connect}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors"
+          >
+            <Wallet className="w-5 h-5" />
+            Connect Wallet to Vote
+          </button>
+        )}
+
+        {/* Vote Buttons - Show when connected and eligible */}
+        {isConnected && !expired && !isOwner && !userHasVoted && !checkingVoteStatus && (
           <div className="flex gap-4">
             <button
               onClick={() => handleVote("yes")}
@@ -260,7 +327,7 @@ export default function DAODetailPage({ params }) {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {voting ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
                   <ThumbsUp className="w-5 h-5" />
@@ -274,7 +341,7 @@ export default function DAODetailPage({ params }) {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-neutral-300 text-black rounded-lg font-medium hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {voting ? (
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
                   <ThumbsDown className="w-5 h-5" />
@@ -285,8 +352,18 @@ export default function DAODetailPage({ params }) {
           </div>
         )}
 
+        {/* Checking vote status */}
+        {checkingVoteStatus && (
+          <div className="flex items-center justify-center p-4 bg-neutral-50 rounded-lg">
+            <Loader2 className="w-5 h-5 text-neutral-500 mr-2 animate-spin" />
+            <span className="text-sm text-neutral-600">
+              Checking your vote status...
+            </span>
+          </div>
+        )}
+
         {/* Status Messages */}
-        {userHasVoted && (
+        {isConnected && userHasVoted && (
           <div className="flex items-center justify-center p-4 bg-neutral-50 rounded-lg">
             <CheckCircle className="w-5 h-5 text-black mr-2" />
             <span className="text-sm font-medium text-black">

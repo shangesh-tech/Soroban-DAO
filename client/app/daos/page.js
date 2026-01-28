@@ -2,17 +2,28 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, Filter, PlusCircle, Vote } from "lucide-react";
+import { Search, Filter, PlusCircle, Vote, Loader2 } from "lucide-react";
 import DAOCard from "@/components/DAOCard";
-import { getAllDAOs, isExpired } from "@/lib/mockData";
+import { getAllDAOs, isExpired } from "@/lib/contract";
 
 export default function DAOsPage() {
   const [daos, setDaos] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all"); // all, active, ended
 
   useEffect(() => {
-    setDaos(getAllDAOs());
+    const fetchDAOs = async () => {
+      try {
+        const data = await getAllDAOs();
+        setDaos(data);
+      } catch (error) {
+        console.error("Error fetching DAOs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDAOs();
   }, []);
 
   const filteredDAOs = daos.filter((dao) => {
@@ -83,8 +94,13 @@ export default function DAOsPage() {
         </div>
       </div>
 
-      {/* DAOs Grid */}
-      {filteredDAOs.length > 0 ? (
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-16">
+          <Loader2 className="w-8 h-8 text-neutral-400 mx-auto mb-4 animate-spin" />
+          <p className="text-neutral-600">Loading DAOs from blockchain...</p>
+        </div>
+      ) : filteredDAOs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDAOs.map((dao) => (
             <DAOCard key={dao.dao_name} dao={dao} />

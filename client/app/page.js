@@ -10,18 +10,33 @@ import {
   ArrowRight,
   Zap,
   Shield,
-  Globe
+  Globe,
+  Loader2
 } from "lucide-react";
 import StatsCard from "@/components/StatsCard";
-import { getAllDAOs, getStats } from "@/lib/mockData";
+import { getAllDAOs, getStats } from "@/lib/contract";
 
 export default function Home() {
   const [stats, setStats] = useState(null);
   const [recentDAOs, setRecentDAOs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setStats(getStats());
-    setRecentDAOs(getAllDAOs().slice(0, 3));
+    const fetchData = async () => {
+      try {
+        const [statsData, daosData] = await Promise.all([
+          getStats(),
+          getAllDAOs(),
+        ]);
+        setStats(statsData);
+        setRecentDAOs(daosData.slice(0, 3));
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   const features = [

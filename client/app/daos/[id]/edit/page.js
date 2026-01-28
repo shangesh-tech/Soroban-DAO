@@ -9,17 +9,24 @@ import {
   Calendar,
   FileText,
   AlertCircle,
+  Loader2,
+  Wallet,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getDAO, updateDAO, MOCK_WALLET } from "@/lib/mockData";
+import { getDAO, buildUpdateDAOTransaction } from "@/lib/contract";
+import { useWallet } from "@/context/WalletContext";
+import { isSameAddress } from "@/lib/wallet";
 
 export default function EditDAOPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const daoName = decodeURIComponent(resolvedParams.id);
 
+  const { isConnected, publicKey, signAndSubmit, connect } = useWallet();
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dao, setDao] = useState(null);
   const [formData, setFormData] = useState({
     description: "",
     deadline: "",
@@ -27,23 +34,39 @@ export default function EditDAOPage({ params }) {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    const dao = getDAO(daoName);
-    if (dao) {
-      if (dao.dao_owner !== MOCK_WALLET) {
+    const fetchDAO = async () => {
+      try {
+        const daoData = await getDAO(daoName);
+        if (daoData) {
+          setDao(daoData);
+          setFormData({
+            description: daoData.dao_des,
+            deadline: new Date(daoData.dao_deadline).toISOString().slice(0, 16),
+          });
+        } else {
+          toast.error("DAO not found");
+          router.push("/daos");
+        }
+      } catch (error) {
+        console.error("Error fetching DAO:", error);
+        toast.error("Failed to load DAO");
+        router.push("/daos");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDAO();
+  }, [daoName, router]);
+
+  // Check if user is owner when wallet connects
+  useEffect(() => {
+    if (!loading && dao && isConnected && publicKey) {
+      if (!isSameAddress(dao.dao_owner, publicKey)) {
         toast.error("You don't have permission to edit this DAO");
         router.push(`/daos/${encodeURIComponent(daoName)}`);
-        return;
       }
-      setFormData({
-        description: dao.dao_des,
-        deadline: new Date(dao.dao_deadline).toISOString().slice(0, 16),
-      });
-    } else {
-      toast.error("DAO not found");
-      router.push("/daos");
     }
-    setLoading(false);
-  }, [daoName, router]);
+  }, [loading, dao, isConnected, publicKey, daoName, router]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -70,6 +93,11 @@ export default function EditDAOPage({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isConnected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     if (!validateForm()) {
       toast.error("Please fix the errors in the form");
       return;
@@ -78,20 +106,25 @@ export default function EditDAOPage({ params }) {
     setSaving(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const deadlineTimestamp = new Date(formData.deadline).getTime();
 
-      updateDAO(
+      const tx = await buildUpdateDAOTransaction(
+        publicKey,
         daoName,
-        MOCK_WALLET,
         formData.description.trim(),
         deadlineTimestamp
       );
 
-      toast.success("DAO updated successfully!");
-      router.push(`/daos/${encodeURIComponent(daoName)}`);
+      const result = await signAndSubmit(tx);
+
+      if (result.success) {
+        toast.success("DAO updated successfully!");
+        router.push(`/daos/${encodeURIComponent(daoName)}`);
+      } else {
+        throw new Error("Transaction failed");
+      }
     } catch (error) {
+      console.error("Update error:", error);
       toast.error(error.message || "Failed to update DAO");
     } finally {
       setSaving(false);
@@ -115,10 +148,38 @@ export default function EditDAOPage({ params }) {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-neutral-200 rounded w-1/3" />
-          <div className="h-4 bg-neutral-200 rounded w-2/3" />
-          <div className="h-64 bg-neutral-200 rounded" />
+        <div className="text-center py-16">
+          <Loader2 className="w-8 h-8 text-neutral-400 mx-auto mb-4 animate-spin" />
+          <p className="text-neutral-600">Loading DAO...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show connect wallet prompt if not connected
+  if (!isConnected) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Link
+          href={`/daos/${encodeURIComponent(daoName)}`}
+          className="inline-flex items-center text-sm text-neutral-600 hover:text-black mb-6"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back to DAO
+        </Link>
+        <div className="text-center py-16 bg-white border border-neutral-200 rounded-xl">
+          <Wallet className="w-12 h-12 text-neutral-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-black mb-2">Connect Wallet</h3>
+          <p className="text-neutral-600 mb-6">
+            Please connect your wallet to edit this DAO.
+          </p>
+          <button
+            onClick={connect}
+            className="inline-flex items-center px-6 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors"
+          >
+            <Wallet className="w-4 h-4 mr-2" />
+            Connect Wallet
+          </button>
         </div>
       </div>
     );
@@ -226,7 +287,7 @@ export default function EditDAOPage({ params }) {
             className="flex-1 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {saving ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
