@@ -146,7 +146,7 @@ export default function DonatePage() {
             {/* Wallet Info */}
             <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 mb-6">
               <div className="flex items-start">
-                <AlertCircle className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm text-neutral-600">
                     <span className="font-medium text-black">Donating from:</span>{" "}

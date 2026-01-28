@@ -181,7 +181,7 @@ export default function AdminPage() {
             {/* Recipient Info */}
             <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4 mb-6">
               <div className="flex items-start">
-                <Wallet className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 flex-shrink-0" />
+                <Wallet className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm text-neutral-600">
                     <span className="font-medium text-black">Recipient:</span>{" "}
@@ -216,7 +216,7 @@ export default function AdminPage() {
       {/* Warning Notice */}
       <div className="mt-6 p-4 bg-neutral-50 border border-neutral-200 rounded-lg">
         <div className="flex items-start">
-          <AlertCircle className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 flex-shrink-0" />
+          <AlertCircle className="w-5 h-5 text-neutral-500 mr-3 mt-0.5 shrink-0" />
           <p className="text-sm text-neutral-600">
             <span className="font-medium text-black">Simulation Mode:</span> This
             is a demo interface. No actual blockchain transactions are being made.
