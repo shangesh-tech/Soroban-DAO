@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, 
-    symbol_short, token, Address, Env, String, Symbol, Vec,
+    contract, contractevent, contractimpl, contracttype, 
+    token, Address, Env, String, Vec,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -55,7 +55,7 @@ pub enum DataKey {
 const DAY_IN_LEDGERS: u32 = 17_280;
 const WEEK_IN_LEDGERS: u32 = 120_960;
 const MONTH_IN_LEDGERS: u32 = 518_400;
-const SIX_MONTHS_IN_LEDGERS: u32 = 3_110_400;  // Better threshold! Users pay less per extension
+const SIX_MONTHS_IN_LEDGERS: u32 = 3_110_400;  
 const YEAR_IN_LEDGERS: u32 = 6_307_200;
 
 // TTL STRATEGY:
@@ -77,6 +77,69 @@ pub struct DAORecord {
     pub yes: u64,
     pub no: u64,
     pub total_votes: u64,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              CONTRACT EVENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+// 
+// Events are emitted using struct types with #[contracttype].
+// The event name is derived from the struct name.
+// Event topics are used for filtering/indexing on-chain.
+//
+// Frontend JavaScript to filter events:
+// - Get ALL dao events: events.filter(e => e.topics[0] === "DaoCreated")
+// - Filter by owner: events.filter(e => e.data.dao_owner === "GA...")
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Event emitted when contract is initialized
+#[contractevent]
+pub struct ContractInitializedEvent {
+    pub admin: Address,
+}
+
+/// Event emitted when a DAO is created
+#[contractevent]
+pub struct DaoCreatedEvent {
+    pub dao_name: String,
+    pub dao_owner: Address,
+    pub dao_deadline: u64,
+}
+
+/// Event emitted when a DAO is updated
+#[contractevent]
+pub struct DaoUpdatedEvent {
+    pub dao_name: String,
+    pub new_deadline: u64,
+}
+
+/// Event emitted when a DAO is deleted
+#[contractevent]
+pub struct DaoDeletedEvent {
+    pub dao_name: String,
+    pub dao_owner: Address,
+}
+
+/// Event emitted when a vote is cast
+#[contractevent]
+pub struct VoteCastEvent {
+    pub dao_name: String,
+    pub voter: Address,
+    pub choice: String,
+}
+
+/// Event emitted when a donation is received
+#[contractevent]
+pub struct DonationReceivedEvent {
+    pub donor: Address,
+    pub amount: i128,
+}
+
+/// Event emitted when a withdrawal is made
+#[contractevent]
+pub struct WithdrawalMadeEvent {
+    pub recipient: Address,
+    pub amount: i128,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -129,10 +192,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: Contract Initialized
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("init"), symbol_short!("admin")),
-            admin
-        );
+        ContractInitializedEvent { admin }.publish(&env);
     }
     
     // ─────────────────────────────────────────────────────────────────────────
@@ -224,45 +284,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: DAO Created
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("dao"), symbol_short!("created")),
-            (dao_name, dao_owner, dao_deadline)
-        );
-
-        // env.events().publish(
-        //     TOPICS,      // First tuple - for FILTERING/SEARCHING
-        //     DATA         // Second tuple - the actual EVENT DATA
-        // );
-
-        // Real Example
-
-        // // Your event:
-        // env.events().publish(
-        //     (symbol_short!("dao"), symbol_short!("created")),  // TOPICS
-        //     (dao_name, dao_owner, dao_deadline)                 // DATA
-        // );
-
-        // Stored in Stellar as:
-
-        // json
-        // {
-        //     "topics": ["dao", "created"],
-        //     "data": {
-        //         "dao_name": "TechDAO",
-        //         "dao_owner": "GA...XYZ",
-        //         "dao_deadline": 1700000000
-        //     }
-        // }
-
-        // Frontend JavaScript to filter:
-
-        // Get ALL dao events
-        // events.filter(e => e.topics[0] === "dao")
-        // Get only "created" dao events
-        // events.filter(e => e.topics[0] === "dao" && e.topics[1] === "created")
-        // Get only "deleted" dao events  
-        // events.filter(e => e.topics[0] === "dao" && e.topics[1] === "deleted")
-
+        DaoCreatedEvent { dao_name, dao_owner, dao_deadline }.publish(&env);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -366,10 +388,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: Vote Cast
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("vote"), symbol_short!("cast")),
-            (dao_name, voter, choice)
-        );
+        VoteCastEvent { dao_name, voter, choice }.publish(&env);
     }
     
     // ─────────────────────────────────────────────────────────────────────────
@@ -432,10 +451,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: DAO Updated
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("dao"), symbol_short!("updated")),
-            (dao_name, new_deadline)
-        );
+        DaoUpdatedEvent { dao_name, new_deadline }.publish(&env);
     }
     
     // ─────────────────────────────────────────────────────────────────────────
@@ -497,10 +513,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: DAO Deleted
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("dao"), symbol_short!("deleted")),
-            (dao_name, dao_owner)
-        );
+        DaoDeletedEvent { dao_name, dao_owner }.publish(&env);
     }
     
     // ─────────────────────────────────────────────────────────────────────────
@@ -593,10 +606,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: Donation Received
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("donate"), symbol_short!("receive")),
-            (donor, amount)
-        );
+        DonationReceivedEvent { donor, amount }.publish(&env);
     }
     
     /// Withdraw all donated funds from the contract
@@ -654,10 +664,7 @@ impl VoteContract {
         // ═══════════════════════════════════════════════════════════════════
         // EMIT EVENT: Withdrawal Made
         // ═══════════════════════════════════════════════════════════════════
-        env.events().publish(
-            (symbol_short!("withdraw"), symbol_short!("made")),
-            (recipient, amount)
-        );
+        WithdrawalMadeEvent { recipient, amount }.publish(&env);
     }
     
     // ─────────────────────────────────────────────────────────────────────────
